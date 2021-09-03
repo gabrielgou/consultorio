@@ -1,4 +1,6 @@
 import mysql.connector
+from datetime import datetime
+
 def mostrar_pacientes():
     cnx = mysql.connector.connect(user='root', database='consultorios')
     cursor = cnx.cursor()
@@ -21,8 +23,11 @@ def mostrar_pacientes():
      #                                                                ,'Numero do Cel', 'Email'))
     if cursor.rowcount >0:
         for i in records:
-            print("""ID: {0} Nome: {1} Sexo:{2}\nNascimento: {3} CPF: {4}\nLogadouro: {5} Nº: {6} Bairro: {7} Cidade: {8}"
-                  \nNº contato: {9} E-mail: %{10}""".format(i[0],i[1],i[3],i[2],i[4],i[5],i[6],i[7],i[8],i[9],i[10]))
+            msg_select = "ID: {0} Nome: {1} Sexo:{2}\nNascimento: {3} CPF: {4}\nLogadouro: {5} Nº: {6} Bairro: {7} Cidade: {8}"
+            msg_select += "\nNº contato: {9} E-mail: {10}"
+            print(msg_select.format(i[0],i[1],i[3],i[2].strftime('%d/%m/%Y'),i[4],i[5],i[6],i[7],i[8],i[9],i[10]))
+            #print("""ID: {0} Nome: {1} Sexo:{2}\nNascimento: {3} CPF: {4}\nLogadouro: {5} Nº: {6} Bairro: {7} Cidade: {8}
+            #      Nº contato: {9} E-mail: %{10}""".format() evitar uso de 3 aspas
     else:
         print("Não existe usuário cadastrado\n")
     print(60*"-")
@@ -47,7 +52,8 @@ def mostrar_agendamentos():
     cursor.close()
 def cadastrar_pacientes():
     nome_paciente = input("Digite o nome do paciente: ")
-    data_nasc = input("Digite Data de Nascimento: ")
+    data_nasc = input("Digite Data de Nascimento(dd/mm/yyyy): ")
+    data_nasc = datetime.strptime(data_nasc, "%d/%m/%Y")#parse data to datetime mysql
     sexo = input("Qual Sexo do paciente (F/M)?: ")
     cpf = input("Digite o CPF do paciente: ")
     logadouro = input("Digite o nome da rua do paciente: ")
@@ -112,4 +118,4 @@ def menu_fisio(crefito):
         elif c==0:
             return 0;
 #Inicio programa:
-menu_atendente()
+menu_atendente(0)
