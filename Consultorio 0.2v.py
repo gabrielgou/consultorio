@@ -16,17 +16,19 @@ def mostrar_pacientes():
         query = ("SELECT * FROM pacientes")
         cursor.execute(query)
     records = cursor.fetchall()
-    print ("{:<5} {:<40} {:<10} {:<2} {:<15} {:<30} {:<11}\n".format('id','Nome','Nascimento','Sexo','CPF','Endereco','Numero do Cel'))
+    #print ("{:<5} {:<40} {:<10} {:<2} {:<15} {:<30} {:<11}\n".format('id','Nome','Nascimento','Sexo',
+     #                                                                'CPF','Logadouro', 'Nº','Bairro', 'Cidade'
+     #                                                                ,'Numero do Cel', 'Email'))
     if cursor.rowcount >0:
         for i in records:
-            print("{:<5} {:<40} {} {:>2}    {:<15} {:<30} {:<11}".format(i[0], i[1], i[2], i[3], i[4],i[5],i[6]))
-            #print(i)
+            print("""ID: {0} Nome: {1} Sexo:{2}\nNascimento: {3} CPF: {4}\nLogadouro: {5} Nº: {6} Bairro: {7} Cidade: {8}"
+                  \nNº contato: {9} E-mail: %{10}""".format(i[0],i[1],i[3],i[2],i[4],i[5],i[6],i[7],i[8],i[9],i[10]))
     else:
         print("Não existe usuário cadastrado\n")
     print(60*"-")
     cnx.close()
     cursor.close()
-def mostrar_atendimentos():
+def mostrar_agendamentos():
     cnx = mysql.connector.connect(user='root', database='consultorios')
     cursor = cnx.cursor()
     query = ("""SELECT a.id_agendamento, p.nome, f.nome, a.data_consulta FROM agendamentos as a 
@@ -34,7 +36,7 @@ def mostrar_atendimentos():
                 inner join fisioterapeutas as f on f.crefito=a.fk_crefito""")
     cursor.execute(query)
     records = cursor.fetchall()
-    print ("{:<5} {:<30} Dr.{:<30} {:<10}\n".format('id','Paciente','fisioterapeutas', 'Data Consulta'))
+    print ("{:<5} {:<30} Dr.{:<30} {:<10}\n".format('id','Paciente','fisioterapeuta', 'Data Consulta'))
     if cursor.rowcount >0:
         for i in records:
             print("{:<5} {:<30} {:<30} {:<10}".format(i[0], i[1], i[2], i[3]))
@@ -71,19 +73,43 @@ def cadastrar_pacientes():
     cnx.close()
     cursor.close()
 
-c = 1
-while(c!=0):
-    print("\t\t\tAtendente")
-    print("1 - Agendar Atendimento")
-    print("2 - Cadastrar Paciente")
-    print("3 - Procurar Paciente")
-    print("4 - Cadastrar Medico")
-    print("5 - Procurar Prescrição")
-    print("0 - Fechar Programa")
-    c = int(input("Digite sua escoolha: "))
-    if c==3:
-        mostrar_pacientes()
-    elif c==5:
-        mostrar_atendimentos()
-    elif c==2:
-        cadastrar_pacientes()
+def menu_atendente(id_atendente):
+    c = 1
+    while(c!=0):
+        print("\t\t\tAtendente")
+        print("1 - Agendar Atendimento")
+        print("2 - Cadastrar Paciente")
+        print("3 - Procurar Paciente")
+        print("4 - Cadastrar Fisioterapeuta")
+        print("5 - Procurar Prescrição")
+        print("0 - Fechar Programa")
+        c = int(input("Digite sua escolha: "))
+        if c==3:
+            mostrar_pacientes()
+        elif c==5:
+            mostrar_agendamentos()
+        elif c==2:
+            cadastrar_pacientes()
+        elif c==0:
+            return 0;
+def menu_fisio(crefito):
+    c = 1
+    while(c!=0):
+        print("\t\t\tFisio")
+        print("1 - Ver Agendamentos")
+        print("2 - Efetuar Atendimento")
+        print("3 - Procurar Paciente")
+        print("5 - Procurar Prescrição")
+        print("6 - Ver grupos de condutas")
+        print("0 - Fechar Programa")
+        c = int(input("Digite sua escolha: "))
+        if c==3:
+            mostrar_pacientes()
+        elif c==5:
+            mostrar_atendimentos()
+        elif c==2:
+            cadastrar_pacientes()
+        elif c==0:
+            return 0;
+#Inicio programa:
+menu_atendente()
