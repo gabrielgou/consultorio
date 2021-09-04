@@ -1,5 +1,6 @@
 import mysql.connector
 from datetime import datetime
+import getpass
 
 def mostrar_pacientes():
     cnx = mysql.connector.connect(user='root', database='consultorios')
@@ -18,9 +19,6 @@ def mostrar_pacientes():
         query = ("SELECT * FROM pacientes")
         cursor.execute(query)
     records = cursor.fetchall()
-    #print ("{:<5} {:<40} {:<10} {:<2} {:<15} {:<30} {:<11}\n".format('id','Nome','Nascimento','Sexo',
-     #                                                                'CPF','Logadouro', 'Nº','Bairro', 'Cidade'
-     #                                                                ,'Numero do Cel', 'Email'))
     if cursor.rowcount >0:
         for i in records:
             msg_select = "ID: {0} Nome: {1} Sexo:{2}\nNascimento: {3} CPF: {4}\nLogadouro: {5} Nº: {6} Bairro: {7} Cidade: {8}"
@@ -79,16 +77,16 @@ def cadastrar_pacientes():
     cnx.close()
     cursor.close()
 
-def menu_atendente(id_atendente):
+def menu_secretaria(id_secretaria):
     c = 1
     while(c!=0):
-        print("\t\t\tAtendente")
+        print("\t\t\tSecretaria")
         print("1 - Agendar Atendimento")
         print("2 - Cadastrar Paciente")
         print("3 - Procurar Paciente")
         print("4 - Cadastrar Fisioterapeuta")
         print("5 - Procurar Prescrição")
-        print("0 - Fechar Programa")
+        print("0 - Logout")
         c = int(input("Digite sua escolha: "))
         if c==3:
             mostrar_pacientes()
@@ -107,7 +105,7 @@ def menu_fisio(crefito):
         print("3 - Procurar Paciente")
         print("5 - Procurar Prescrição")
         print("6 - Ver grupos de condutas")
-        print("0 - Fechar Programa")
+        print("0 - Logout")
         c = int(input("Digite sua escolha: "))
         if c==3:
             mostrar_pacientes()
@@ -117,5 +115,61 @@ def menu_fisio(crefito):
             cadastrar_pacientes()
         elif c==0:
             return 0;
+def login():
+    enable=-1
+    while(enable!=0):
+        enable = int(input("Login:\n1 - Secretaria\n2 - Fisioterapeuta\n0 - Para sair\nDigite a opção: "))
+        if enable==1:
+            user_secretaria = "-1"
+            while(user_secretaria!="0"):
+                user_secretaria = input("Digite o cpf (digite 0 para sair): ")
+                if(user_secretaria=='0'):
+                    break
+                else:
+                    pass_secretaria = getpass.getpass(prompt="Digite Token: ", stream=None)
+                    #pass_secretaria = input("Digite o token: ")
+                cnx = mysql.connector.connect(user='root', database='consultorios')
+                cursor = cnx.cursor()
+                query = "SELECT token FROM secretarias WHERE cpf='{}'".format(user_secretaria)
+                cursor.execute(query)
+                results = cursor.fetchone()
+                if cursor.rowcount>0:
+                    token=results[0]
+                    if token == pass_secretaria:
+                        print("Login Realizado com Sucesso!")
+                        menu_secretaria(user_secretaria)
+                    else:
+                        print("Token ERRADO!")
+                else:
+                    print("\nNão existe Usuário")
+                cnx.close()
+                cursor.close()
+        elif enable==2:
+            crefito="-1"
+            while(crefito!="0"):
+                crefito = input("Digite o crefito (digite 0 para sair): ")
+                if(crefito=='0'):
+                    break
+                else:
+                    pass_fisio = getpass.getpass(prompt="Digite o Token: ", stream=None)
+                    #pass_fisio = input("Digite o token: ")
+                cnx = mysql.connector.connect(user='root', database='consultorios')
+                cursor = cnx.cursor()
+                query = "SELECT token FROM fisioterapeutas WHERE crefito='{}'".format(crefito)
+                cursor.execute(query)
+                results = cursor.fetchone()
+                if cursor.rowcount>0:
+                    token=results[0]
+                    if token == pass_fisio:
+                        print("Login Realizado com Sucesso!")
+                        menu_fisio(crefito)
+                    else:
+                        print("Token ERRADO!")
+                else:
+                    print("\nNão existe Crefito cadastrado")
+                cnx.close()
+                cursor.close()
+    
 #Inicio programa:
-menu_atendente(0)
+login()
+print("Fechando programa")
