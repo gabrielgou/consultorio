@@ -1,6 +1,14 @@
 import mysql.connector
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import getpass
+
+def data_atual():
+    data_atual = datetime.now()
+    diferenca = timedelta(hours=-3)
+    fuso_horario = timezone(diferenca)
+    data_atual = data_atual.astimezone(fuso_horario)
+    return data_atual.strftime("%Y-%m-%d")
+    
 
 def mostrar_pacientes():
     cnx = mysql.connector.connect(user='root', database='consultorios')
@@ -34,15 +42,48 @@ def mostrar_pacientes():
 def mostrar_agendamentos():
     cnx = mysql.connector.connect(user='root', database='consultorios')
     cursor = cnx.cursor()
-    query = ("""SELECT a.id_agendamento, p.nome, f.nome, a.data_consulta FROM agendamentos as a 
+    escolha = int(input("1 - Por CPF\n2 - Por data\n3 - Por fisioterapeuta\nDigite sua escolha: "))
+    if escolha==1:
+        cpf = input("Digite o CPF: ")
+        query = ("""SELECT a.id_agendamento, p.nome, f.nome, a.data_consulta FROM agendamentos as a
+                inner join pacientes as p on p.cpf=a.fk_cpf and a.fk_cpf='{}'
+                inner join fisioterapeutas as f on f.crefito=a.fk_crefito""".format(cpf))
+    elif escolha==2:
+        data_consulta = input("Digite a dia de consulta (em dd/mm/yyyy): ")
+        data_consulta = datetime.strptime(data_consulta, "%d/%m/%Y")
+        query = ("""SELECT a.id_agendamento, p.nome, f.nome, a.data_consulta FROM agendamentos as a
+                inner join pacientes as p on a.fk_cpf=p.cpf and a.data_consulta='{}'
+                inner join fisioterapeutas as f on f.crefito=a.fk_crefito""".format(data_consulta))
+    elif escolha==3:
+        crefito = input("Digite o Crefito do fisioterapeuta: ")
+        query = ("""SELECT a.id_agendamento, p.nome, f.nome, a.data_consulta FROM agendamentos as a
                 inner join pacientes as p on a.fk_cpf=p.cpf
-                inner join fisioterapeutas as f on f.crefito=a.fk_crefito""")
+                inner join fisioterapeutas as f on f.crefito=a.fk_crefito and a.fk_crefito='{}'""".format(crefito))
     cursor.execute(query)
     records = cursor.fetchall()
-    print ("{:<5} {:<30} Dr.{:<30} {:<10}\n".format('id','Paciente','fisioterapeuta', 'Data Consulta'))
+    print(60*"-")
+    print ("{:<5} {:<30} {:<30} {:<10}\n".format('id','Paciente','fisioterapeuta', 'Data Consulta'))
     if cursor.rowcount >0:
         for i in records:
-            print("{:<5} {:<30} {:<30} {:<10}".format(i[0], i[1], i[2], i[3]))
+            print("{:<5} {:<30} {:<30} {:<10}".format(i[0], i[1], i[2], i[3].strftime('%d/%m/%Y')))
+    else:
+        print("Não existe consultas\n")
+    print(60*"-")
+    cnx.close()
+    cursor.close()
+def mostrar_agendamentos_fisio(fk_crefito):
+    cnx = mysql.connector.connect(user='root', database='consultorios')
+    cursor = cnx.cursor()
+    query = ("""SELECT a.id_agendamento, p.nome, f.nome, a.data_consulta FROM agendamentos as a
+                inner join pacientes as p on a.fk_cpf=p.cpf
+                inner join fisioterapeutas as f on f.crefito=a.fk_crefito and a.fk_crefito='{}'""".format(fk_crefito))
+    cursor.execute(query)
+    records = cursor.fetchall()
+    print(60*"-")
+    print ("{:<5} {:<30} {:<30} {:<10}\n".format('id','Paciente','fisioterapeuta', 'Data Consulta'))
+    if cursor.rowcount >0:
+        for i in records:
+            print("{:<5} {:<30} {:<30} {:<10}".format(i[0], i[1], i[2], i[3].strftime('%d/%m/%Y')))
     else:
         print("Não existe consultas\n")
     print(60*"-")
@@ -65,7 +106,6 @@ def cadastrar_pacientes():
     data = (nome_paciente, data_nasc,sexo,cpf,logadouro,n_casa,bairro,cidade,numero_cel,email)
     query = ("INSERT INTO pacientes (nome, nascimento,sexo,cpf,logadouro, n_casa, bairro, cidade,n_celular, email) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)")
     cursor.execute(query,data)
-    print(query)
     records = cursor.fetchall()
     print(records)
     if cursor.rowcount>0:
@@ -77,6 +117,99 @@ def cadastrar_pacientes():
     cnx.close()
     cursor.close()
 
+def cadastrar_fisio():
+    cnx = mysql.connector.connect(user='root', database='consultorios')
+    cursor = cnx.cursor()
+    nome_fisio = input("Digite o nome do fisioterapeuta: ")
+    crefito = input("Digite o numero do crefito")
+    enable_atuacao = int(input("Escolha a area de atuação: \n1-Traumato-ortopedia\n2-Neuro-funcional\n3-Pós-Cirurgico\n4-DermatoFuncional\nDigite sua escolha: "))
+    if enable_atuacao==1:
+        atuacao="Traumato-ortopedia"
+    elif enable_atuacao==2:
+        atuacao="Neuro-funcional"
+    elif enable_atuacao==3:
+        atuacao="Pós-Cirurgico"
+    elif enable_atuacao==4:
+        atuacao="Dermato-Funcional"
+    token = getpass.getpass(prompt="Digite Token: ", stream=None)
+    query = "INSERT INTO fisioterapeutas (nome,crefito,token) VALUES (%s,%s,%s)"
+    data = (nome_fisio, crefito, token)
+    cursor.execute(query, data)
+    results = cursor.fetchone()
+    if cursor.rowcount>0:
+        query="INSERT INTO especialidades (fk_crefito, atuacao) VALUES (%s,%s)"
+        data = (crefito, atuacao)
+        cursor.execute(query,data)
+        results = cursor.fetchone()
+        if cursor.rowcount>0:
+            print("Cadastro realizado com sucesso!")
+        else:
+            print("Falha no cadastro de especialidade")
+    else:
+        print("Falha no cadastro do fisioterapeuta")
+    cnx.commit()
+    cnx.close()
+    cursor.close()
+    
+def agendar():
+    cnx = mysql.connector.connect(user='root', database='consultorios')
+    cursor = cnx.cursor()
+    print("Marcação de consultas: ")
+    cpf = input("Digite o cpf do paciente: ")
+    query = "SELECT nome FROM pacientes where cpf='{}'".format(cpf)
+    cursor.execute(query)
+    results = cursor.fetchone()
+    if cursor.rowcount>0:
+        nome_paciente=results[0]
+    else:
+        print("Não existe esse Paciente")
+    data_consulta = input("Digite a data para o agendamento (em dd/mm/yyyy): ")
+    data_consulta_mysql = datetime.strptime(data_consulta, "%d/%m/%Y")
+    triagem = input("Quais os sintomas do paciente e área acometida: ")
+    enable_atuacao = int(input("Escolha a area de atuação: \n1-Traumato-ortopedia\n2-Neuro-funcional\n3-Pós-Cirurgico\n4-DermatoFuncional\nDigite sua escolha: "))
+    if enable_atuacao==1:
+        atuacao="Traumato-ortopedia"
+    elif enable_atuacao==2:
+        atuacao="Neuro-funcional"
+    elif enable_atuacao==3:
+        atuacao="Pós-Cirurgico"
+    elif enable_atuacao==4:
+        atuacao="Dermato-Funcional"
+    query = """SELECT f.nome, e.fk_crefito FROM especialidades as e 
+            inner join fisioterapeutas as f on f.crefito=e.fk_crefito and e.atuacao='{}'""".format(atuacao)
+    cursor.execute(query)
+    results = cursor.fetchall()
+    if cursor.rowcount>0:
+        count=0
+        for i in results:
+            count+=1
+            print("ID:{0} Nome Fisio: {1} Crefito: {2}".format(count, i[0],i[1]))
+        escolha = int(input("Digite o id do fisiotetapeuta: "))
+        count=0
+        for i in results:
+            count+=1
+            if count==escolha:
+                nome_fisio = i[0]
+                crefito = i[1]
+    print("Confirmação de agendamento:\nCPF: {0} Nome: {1}\nNome do Fisio: {2} Crefito: {3}\nTriagem: {4} Data da Consulta: {5}".format(cpf,nome_paciente,nome_fisio,crefito,triagem,data_consulta))
+    data = (cpf,triagem, data_consulta_mysql, crefito)
+    confirma = int(input("Confirma o agendamento?\n0 - Não 1 - Sim\nDigite sua escolha: "))
+    if confirma == 1:
+        query="INSERT INTO agendamentos (fk_cpf,triagem, data_consulta, fk_crefito) VALUES (%s,%s,%s,%s)"
+        cursor.execute(query,data)
+        results = cursor.fetchall()
+        if cursor.rowcount>0:
+            print("\nAgendamento Realizado!")
+        else:
+            print("\nFalha no Agendamento!")
+    else:
+        print("Agendamento Não Concluido!")
+        
+    cnx.commit()
+    cnx.close()
+    cursor.close()
+    
+
 def menu_secretaria(id_secretaria):
     c = 1
     while(c!=0):
@@ -85,15 +218,19 @@ def menu_secretaria(id_secretaria):
         print("2 - Cadastrar Paciente")
         print("3 - Procurar Paciente")
         print("4 - Cadastrar Fisioterapeuta")
-        print("5 - Procurar Prescrição")
+        print("5 - Procurar agendamentos")
         print("0 - Logout")
         c = int(input("Digite sua escolha: "))
         if c==3:
             mostrar_pacientes()
         elif c==5:
             mostrar_agendamentos()
+        elif c==1:
+            agendar()
         elif c==2:
             cadastrar_pacientes()
+        elif c==4:
+            cadastrar_fisio()
         elif c==0:
             return 0;
 def menu_fisio(crefito):
@@ -113,6 +250,8 @@ def menu_fisio(crefito):
             mostrar_atendimentos()
         elif c==2:
             cadastrar_pacientes()
+        elif c==1:
+            mostrar_agendamentos_fisio(crefito)
         elif c==0:
             return 0;
 def login():
